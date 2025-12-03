@@ -76,3 +76,6 @@ obj/
 
 # Signing files
 .signing/
+
+# Claude Code settings
+.claude/

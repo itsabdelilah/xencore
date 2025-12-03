@@ -8,25 +8,25 @@
     },
     "open_ad_unit": {
       "defaultValue": {
-        "value": "ca-app-pub-5141318425870910/1716271883"
+        "value": "ca-app-pub-3940256099942544/9257395921"
       },
       "description": "App Open ad unit ID"
     },
     "inter_ad_unit": {
       "defaultValue": {
-        "value": "ca-app-pub-5141318425870910/1025458002"
+        "value": "ca-app-pub-3940256099942544/1033173712"
       },
       "description": "Interstitial ad unit ID"
     },
     "reward_ad_unit": {
       "defaultValue": {
-        "value": "ca-app-pub-5141318425870910/6313992441"
+        "value": "ca-app-pub-3940256099942544/5224354917"
       },
       "description": "Rewarded ad unit ID"
     },
     "native_ad_unit": {
       "defaultValue": {
-        "value": "ca-app-pub-5141318425870910/4135033546"
+        "value": "ca-app-pub-3940256099942544/2247696110"
       },
       "description": "Native ad unit ID"
     },
