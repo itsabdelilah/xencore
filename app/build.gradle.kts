@@ -38,8 +38,8 @@ android {
 
 dependencies {
 
-    // ✅ Use the ads library
-    implementation(project(":adscore"))
+    // ✅ XenCore - AdMob Mediation Library from JitPack
+    implementation("com.github.itsabdelilah:xencore:1.0.0")
 
     // App-specific UI dependencies
     implementation(libs.androidx.appcompat)
