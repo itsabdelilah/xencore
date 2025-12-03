@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "408933958604",
+    "project_id": "io-ads-mediation",
+    "storage_bucket": "io-ads-mediation.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:408933958604:android:bcf11a651153c9a43cd369",
+        "android_client_info": {
+          "package_name": "io.ads.demo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB7HUPKj6zvFoFF-SCiQIP-UCwTF7Z_6-0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:408933958604:android:c8116c404663dab93cd369",
+        "android_client_info": {
+          "package_name": "io.ads.mediation"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB7HUPKj6zvFoFF-SCiQIP-UCwTF7Z_6-0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

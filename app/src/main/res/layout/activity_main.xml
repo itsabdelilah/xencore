@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    tools:context=".MainActivity">
+
+    <LinearLayout
+        android:id="@+id/main"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="AdMob Mediation Demo"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="24dp" />
+
+        <!-- App Open Ad Button -->
+        <Button
+            android:id="@+id/btnAppOpen"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Show App Open Ad"
+            android:textAllCaps="false"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Interstitial Ad Button -->
+        <Button
+            android:id="@+id/btnInterstitial"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Show Interstitial Ad"
+            android:textAllCaps="false"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Rewarded Ad Button -->
+        <Button
+            android:id="@+id/btnRewarded"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Show Rewarded Ad"
+            android:textAllCaps="false"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Load Native Ad Button -->
+        <Button
+            android:id="@+id/btnNative"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Load Native Ad"
+            android:textAllCaps="false"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Status TextView -->
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:background="#F5F5F5"
+            android:text="Status: Ready"
+            android:textSize="14sp"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Native Ad Container with Shimmer -->
+        <FrameLayout
+            android:id="@+id/nativeAdContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone">
+
+            <!-- Shimmer placeholder (shown while loading) -->
+            <include
+                android:id="@+id/shimmerPlaceholder"
+                layout="@layout/shimmer_native_ad"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
+        </FrameLayout>
+
+    </LinearLayout>
+
+</ScrollView>

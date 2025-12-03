@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Required permissions for ads -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
+
+    <!--
+        NO <application> tag here - this is a library!
+
+        Apps using this library must provide their own:
+        - APPLICATION_ID in their AndroidManifest.xml
+        - google-services.json for Firebase
+        - Application class initialization
+
+        See README.md for usage instructions.
+    -->
+
+</manifest>

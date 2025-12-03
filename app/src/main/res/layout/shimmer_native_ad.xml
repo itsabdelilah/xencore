@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.facebook.shimmer.ShimmerFrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/shimmer_view_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:shimmer_auto_start="true"
+    app:shimmer_base_alpha="0.7"
+    app:shimmer_direction="left_to_right"
+    app:shimmer_duration="1500"
+    app:shimmer_repeat_count="-1"
+    app:shimmer_repeat_mode="restart"
+    app:shimmer_shape="linear"
+    app:shimmer_tilt="0">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="#2C2C2C"
+        android:minHeight="40dp"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- Ad Badge Placeholder -->
+        <View
+            android:layout_width="30dp"
+            android:layout_height="14dp"
+            android:background="#3F3F3F" />
+
+        <!-- Icon and Info Section -->
+        <LinearLayout
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <!-- Icon Placeholder -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="5dp"
+                app:cardCornerRadius="10dp">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#3F3F3F" />
+            </androidx.cardview.widget.CardView>
+
+            <!-- Text Placeholders -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="10dp">
+
+                <!-- Headline Placeholder -->
+                <View
+                    android:layout_width="180dp"
+                    android:layout_height="14dp"
+                    android:background="#3F3F3F" />
+
+                <!-- Advertiser Placeholder -->
+                <View
+                    android:layout_width="120dp"
+                    android:layout_height="12dp"
+                    android:layout_marginTop="5dp"
+                    android:background="#3F3F3F" />
+
+                <!-- Stars Placeholder -->
+                <View
+                    android:layout_width="80dp"
+                    android:layout_height="12dp"
+                    android:layout_marginTop="5dp"
+                    android:background="#3F3F3F" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Body Text Placeholder -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="5dp">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="12dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:background="#3F3F3F" />
+
+            <View
+                android:layout_width="250dp"
+                android:layout_height="12dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginTop="5dp"
+                android:background="#3F3F3F" />
+
+            <!-- CTA Button Placeholder -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="10dp"
+                android:background="#3F3F3F" />
+        </LinearLayout>
+    </LinearLayout>
+</com.facebook.shimmer.ShimmerFrameLayout>

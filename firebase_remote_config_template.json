@@ -1,0 +1,40 @@
+{
+  "parameters": {
+    "admob_app_id": {
+      "defaultValue": {
+        "value": ""
+      },
+      "description": "AdMob App ID for runtime override (empty = use manifest value). Format: ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY"
+    },
+    "open_ad_unit": {
+      "defaultValue": {
+        "value": "ca-app-pub-5141318425870910/1716271883"
+      },
+      "description": "App Open ad unit ID"
+    },
+    "inter_ad_unit": {
+      "defaultValue": {
+        "value": "ca-app-pub-5141318425870910/1025458002"
+      },
+      "description": "Interstitial ad unit ID"
+    },
+    "reward_ad_unit": {
+      "defaultValue": {
+        "value": "ca-app-pub-5141318425870910/6313992441"
+      },
+      "description": "Rewarded ad unit ID"
+    },
+    "native_ad_unit": {
+      "defaultValue": {
+        "value": "ca-app-pub-5141318425870910/4135033546"
+      },
+      "description": "Native ad unit ID"
+    },
+    "ad_frequency_seconds": {
+      "defaultValue": {
+        "value": "30"
+      },
+      "description": "Minimum seconds between App Open and Interstitial ads (frequency capping)"
+    }
+  }
+}
