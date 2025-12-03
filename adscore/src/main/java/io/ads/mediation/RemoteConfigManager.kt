@@ -65,13 +65,38 @@ object RemoteConfigManager {
 
     private lateinit var remoteConfig: FirebaseRemoteConfig
     private var isInitialized = false
+    private var appConfig: AdConfig? = null
 
     /**
      * Initialize Firebase Remote Config with defaults.
      * Call this once from Application.onCreate()
+     *
+     * ## 3-Tier Fallback Priority:
+     * 1. Firebase Remote Config (fetched from your Firebase project)
+     * 2. AdConfig (app-provided defaults via this parameter)
+     * 3. AdUnits (library's test IDs - last resort)
+     *
+     * @param config Optional app-specific default ad units.
+     *               Recommended for production apps to ensure proper fallback behavior.
+     *
+     * @see AdConfig
      */
-    fun init() {
+    fun init(config: AdConfig? = null) {
         if (isInitialized) return
+
+        appConfig = config
+
+        if (config != null) {
+            Log.d(TAG, "✅ App-provided AdConfig received:")
+            Log.d(TAG, "   ├─ App Open: ${config.appOpenAdUnit}")
+            Log.d(TAG, "   ├─ Interstitial: ${config.interstitialAdUnit}")
+            Log.d(TAG, "   ├─ Rewarded: ${config.rewardedAdUnit}")
+            Log.d(TAG, "   ├─ Native: ${config.nativeAdUnit}")
+            Log.d(TAG, "   └─ Frequency: ${config.adFrequencySeconds}s")
+        } else {
+            Log.w(TAG, "⚠️  No AdConfig provided - will use test IDs if Remote Config fails")
+            Log.w(TAG, "   Recommended: Provide AdConfig to AdsManager.init() for production")
+        }
 
         try {
             // Get Remote Config instance
@@ -84,27 +109,31 @@ object RemoteConfigManager {
 
             remoteConfig.setConfigSettingsAsync(configSettings)
 
-            // Set default values (fallback to AdUnits)
+            // Set default values (use app config if provided, otherwise library test IDs)
             val defaults = hashMapOf<String, Any>(
                 KEY_ADMOB_APP_ID to "", // Empty = use manifest value
-                KEY_OPEN_AD_UNIT to AdUnits.OPEN,
-                KEY_INTER_AD_UNIT to AdUnits.INTER,
-                KEY_REWARD_AD_UNIT to AdUnits.REWARD,
-                KEY_NATIVE_AD_UNIT to AdUnits.NATIVE,
-                KEY_AD_FREQUENCY_SECONDS to AdUnits.FREQUENCY_SECONDS
+                KEY_OPEN_AD_UNIT to (config?.appOpenAdUnit ?: AdUnits.OPEN),
+                KEY_INTER_AD_UNIT to (config?.interstitialAdUnit ?: AdUnits.INTER),
+                KEY_REWARD_AD_UNIT to (config?.rewardedAdUnit ?: AdUnits.REWARD),
+                KEY_NATIVE_AD_UNIT to (config?.nativeAdUnit ?: AdUnits.NATIVE),
+                KEY_AD_FREQUENCY_SECONDS to (config?.adFrequencySeconds ?: AdUnits.FREQUENCY_SECONDS)
             )
 
             remoteConfig.setDefaultsAsync(defaults)
 
             isInitialized = true
-            Log.d(TAG, "✅ RemoteConfigManager initialized with defaults")
+            Log.d(TAG, "✅ RemoteConfigManager initialized")
 
             // Fetch fresh values from server
             fetchAndActivate()
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ RemoteConfig initialization failed: ${e.message}")
-            Log.w(TAG, "⚠️ Using hardcoded AdUnits as fallback")
+            if (config != null) {
+                Log.w(TAG, "⚠️ Will use app-provided AdConfig as fallback")
+            } else {
+                Log.w(TAG, "⚠️ Will use library test IDs as fallback")
+            }
         }
     }
 

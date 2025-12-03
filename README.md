@@ -36,7 +36,7 @@ In your app's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.github.contabox:ads-mediation:1.0.0")
+    implementation("com.github.itsabdelilah:xencore:1.0.0")
 }
 ```
 
@@ -168,6 +168,74 @@ Or import this template:
 
 ---
 
+## 🎯 3-Tier Fallback System
+
+XenCore uses a smart 3-tier fallback system to ensure your ads always work, even when Firebase Remote Config is unavailable:
+
+### Priority Chain
+
+```
+1. Firebase Remote Config (BEST)
+   ↓ (if fetch fails)
+2. AdConfig App Defaults (GOOD)
+   ↓ (if not provided)
+3. Google Test IDs (LAST RESORT)
+```
+
+### Why This Matters
+
+**Without AdConfig:**
+- When Firebase fails (no internet, timeout, error), ALL apps using XenCore would fall back to the same Google test ad units
+- No revenue when network is down
+
+**With AdConfig:**
+- Each app provides its own fallback ad units
+- When Firebase fails, YOUR app shows YOUR ads (not test ads)
+- Revenue continues even offline!
+
+### How to Provide AdConfig
+
+When initializing AdsManager, provide your app's default ad unit IDs:
+
+```kotlin
+class MyApp : Application() {
+    override fun onCreate() {
+        super.onCreate()
+
+        FirebaseApp.initializeApp(this)
+
+        // Create your app's default ad units
+        val adConfig = AdConfig(
+            appOpenAdUnit = "ca-app-pub-XXXXX/1111111111",       // Your App Open ID
+            interstitialAdUnit = "ca-app-pub-XXXXX/2222222222",  // Your Interstitial ID
+            rewardedAdUnit = "ca-app-pub-XXXXX/3333333333",      // Your Rewarded ID
+            nativeAdUnit = "ca-app-pub-XXXXX/4444444444",        // Your Native ID
+            adFrequencySeconds = 30L
+        )
+
+        // Pass AdConfig to enable 3-tier fallback
+        AdsManager.init(this, adConfig)
+    }
+}
+```
+
+### When Each Tier is Used
+
+| Scenario | Tier Used | Result |
+|----------|-----------|--------|
+| ✅ Firebase fetch succeeds | **Tier 1: Remote Config** | Your remote values from Firebase Console |
+| ⚠️ Firebase fails + AdConfig provided | **Tier 2: AdConfig** | Your hardcoded ad units from code |
+| ❌ Firebase fails + No AdConfig | **Tier 3: Test IDs** | Google's official test ads (no revenue) |
+
+### Best Practices
+
+✅ **RECOMMENDED:** Always provide AdConfig for production apps
+✅ Use Firebase Remote Config for easy updates without app releases
+✅ Test Firebase failures by turning off internet to verify your AdConfig works
+❌ Don't rely on test IDs in production - they generate no revenue!
+
+---
+
 ## 🚀 Quick Start
 
 ### 1. Setup Firebase
@@ -195,11 +263,22 @@ class MyApp : Application() {
         // Initialize Firebase
         FirebaseApp.initializeApp(this)
 
-        // Initialize AdsManager
-        AdsManager.init(this)
+        // Create app-specific default ad units (RECOMMENDED)
+        val adConfig = AdConfig(
+            appOpenAdUnit = "ca-app-pub-XXXXX/1111111111",       // Your App Open ID
+            interstitialAdUnit = "ca-app-pub-XXXXX/2222222222",  // Your Interstitial ID
+            rewardedAdUnit = "ca-app-pub-XXXXX/3333333333",      // Your Rewarded ID
+            nativeAdUnit = "ca-app-pub-XXXXX/4444444444",        // Your Native ID
+            adFrequencySeconds = 30L
+        )
+
+        // Initialize AdsManager with AdConfig
+        AdsManager.init(this, adConfig)
     }
 }
 ```
+
+**Note:** AdConfig is optional but highly recommended for production apps. Without it, the library falls back to Google's test ad units when Firebase fails (no revenue).
 
 ### 4. Request Consent in MainActivity
 
@@ -332,14 +411,19 @@ Create your own layout with **required view IDs**:
 
 Configure these parameters in Firebase Console:
 
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
+| Parameter | Type | Description | Fallback (if fetch fails) |
+|-----------|------|-------------|---------------------------|
 | `admob_app_id` | String | Override App ID at runtime | "" (use manifest) |
-| `open_ad_unit` | String | App Open ad unit ID | Test ID |
-| `inter_ad_unit` | String | Interstitial ad unit ID | Test ID |
-| `reward_ad_unit` | String | Rewarded ad unit ID | Test ID |
-| `native_ad_unit` | String | Native ad unit ID | Test ID |
-| `ad_frequency_seconds` | Number | Seconds between interstitial/app open ads | 30 |
+| `open_ad_unit` | String | App Open ad unit ID | AdConfig → Google Test ID |
+| `inter_ad_unit` | String | Interstitial ad unit ID | AdConfig → Google Test ID |
+| `reward_ad_unit` | String | Rewarded ad unit ID | AdConfig → Google Test ID |
+| `native_ad_unit` | String | Native ad unit ID | AdConfig → Google Test ID |
+| `ad_frequency_seconds` | Number | Seconds between interstitial/app open ads | AdConfig (30s) → 30s |
+
+**Note:** The "Fallback" column shows the 3-tier fallback chain:
+1. Remote Config value (if fetch succeeds)
+2. AdConfig value (if you provided AdConfig to AdsManager.init())
+3. Google Test ID (last resort if no AdConfig provided)
 
 ### Example Configuration:
 
@@ -410,7 +494,7 @@ Contributions welcome! Please open an issue or PR.
 
 ## 📧 Support
 
-For issues, please visit: [GitHub Issues](https://github.com/contabox/ads-library/issues)
+For issues, please visit: [GitHub Issues](https://github.com/itsabdelilah/xencore/issues)
 
 ---
 

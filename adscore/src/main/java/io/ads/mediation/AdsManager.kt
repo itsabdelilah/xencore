@@ -73,14 +73,42 @@ object AdsManager : DefaultLifecycleObserver {
      *
      * CRITICAL INITIALIZATION ORDER:
      * 1. Get current manifest App ID (for logging)
-     * 2. Initialize Remote Config
+     * 2. Initialize Remote Config (with optional app defaults)
      * 3. Fetch Remote Config SYNCHRONOUSLY (5s timeout)
      * 4. Attempt App ID override (THE HACK - must be before MobileAds.initialize)
      * 5. Set up lifecycle observer and consent
      *
+     * ## 3-Tier Fallback System:
+     * ```
+     * 1. Firebase Remote Config (best)     → Your remote values from Firebase Console
+     * 2. AdConfig (good)                    → Your app's hardcoded defaults
+     * 3. Library test IDs (last resort)     → Google's test ad units
+     * ```
+     *
+     * ## Usage:
+     * ```kotlin
+     * // Option 1: With app defaults (RECOMMENDED for production)
+     * val config = AdConfig(
+     *     appOpenAdUnit = "ca-app-pub-XXXXX/1111111111",
+     *     interstitialAdUnit = "ca-app-pub-XXXXX/2222222222",
+     *     rewardedAdUnit = "ca-app-pub-XXXXX/3333333333",
+     *     nativeAdUnit = "ca-app-pub-XXXXX/4444444444"
+     * )
+     * AdsManager.init(this, config)
+     *
+     * // Option 2: Without app defaults (uses test IDs if Firebase fails)
+     * AdsManager.init(this)
+     * ```
+     *
+     * @param app Application instance
+     * @param adConfig Optional app-specific default ad units. Highly recommended for production.
+     *
      * Note: MobileAds.initialize() is called later from requestConsentAndInitialize()
+     *
+     * @see AdConfig
+     * @see RemoteConfigManager
      */
-    fun init(app: Application) {
+    fun init(app: Application, adConfig: AdConfig? = null) {
         if (isInitialized) {
             Log.w(TAG, "⚠️ Already initialized, skipping")
             return
@@ -96,9 +124,9 @@ object AdsManager : DefaultLifecycleObserver {
         val manifestAppId = AdmobAppIdOverride.getCurrentAppId(app)
         Log.d(TAG, "📋 Manifest App ID: $manifestAppId")
 
-        // STEP 2: Initialize Remote Config
+        // STEP 2: Initialize Remote Config (with app defaults if provided)
         Log.d(TAG, "⚙️  Initializing Remote Config...")
-        RemoteConfigManager.init()
+        RemoteConfigManager.init(adConfig)
 
         // STEP 3: Fetch Remote Config (BLOCKING - critical for App ID override)
         Log.d(TAG, "📡 Fetching Remote Config (blocking, 5s timeout)...")
