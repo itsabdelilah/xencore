@@ -38,8 +38,8 @@ android {
 
 dependencies {
 
-    // ✅ XenCore - AdMob Mediation Library from JitPack
-    implementation("com.github.itsabdelilah:xencore:1.0.0")
+    // Local library dependency (for building on JitPack and local development)
+    implementation(project(":adscore"))
 
     // App-specific UI dependencies
     implementation(libs.androidx.appcompat)
