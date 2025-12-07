@@ -39,10 +39,8 @@ class MainActivity : AppCompatActivity() {
         nativeAdContainer = findViewById(R.id.nativeAdContainer)
         shimmerPlaceholder = findViewById(R.id.shimmerPlaceholder)
 
-        // Request consent and initialize ads SDK (required for SDK 24.x)
-        AdsManager.requestConsentAndInitialize(this)
-
-        // Preload ads (will only load after SDK initialization completes)
+        // SDK is already initialized in SplashActivity, just preload ads
+        // This ensures smooth UX - SDK init happens during splash loading
         AdsManager.preloadAppOpen()
         AdsManager.preloadInterstitial()
         AdsManager.preloadRewarded()

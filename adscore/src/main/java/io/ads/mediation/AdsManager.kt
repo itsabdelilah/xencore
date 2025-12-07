@@ -176,6 +176,160 @@ object AdsManager : DefaultLifecycleObserver {
     }
 
     /**
+     * Initialize WITHOUT blocking fetch - for use in Application.onCreate()
+     *
+     * This method does quick initialization without any blocking operations.
+     * The Remote Config fetch and App ID override are deferred to SplashActivity.
+     *
+     * @param app Application instance
+     * @param adConfig Optional app-specific default ad units. Highly recommended for production.
+     *
+     * @see initializeOnSplash for completing initialization with fetch
+     */
+    fun initWithoutFetch(app: Application, adConfig: AdConfig? = null) {
+        if (isInitialized) {
+            Log.w(TAG, "⚠️ Already initialized, skipping")
+            return
+        }
+
+        application = app
+
+        Log.d(TAG, "════════════════════════════════════")
+        Log.d(TAG, "⚡ AdsManager Quick Init (no fetch)")
+        Log.d(TAG, "════════════════════════════════════")
+
+        // Get current manifest App ID (for logging)
+        val manifestAppId = AdmobAppIdOverride.getCurrentAppId(app)
+        Log.d(TAG, "📋 Manifest App ID: $manifestAppId")
+
+        // Initialize Remote Config WITHOUT fetch
+        Log.d(TAG, "⚙️  Initializing Remote Config (no fetch)...")
+        RemoteConfigManager.init(adConfig)
+
+        // Set up lifecycle observer for app open ads
+        Log.d(TAG, "🔄 Setting up lifecycle observer...")
+        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+
+        // Initialize consent information
+        Log.d(TAG, "🔐 Initializing consent information...")
+        consentInformation = UserMessagingPlatform.getConsentInformation(app)
+
+        isInitialized = true
+
+        Log.d(TAG, "✅ Quick initialization complete")
+        Log.d(TAG, "   Next: Call initializeOnSplash() from SplashActivity")
+        Log.d(TAG, "════════════════════════════════════")
+    }
+
+    /**
+     * Complete initialization on SplashActivity with async operations.
+     *
+     * This method:
+     * 1. Fetches Remote Config asynchronously
+     * 2. Attempts App ID override if configured
+     * 3. Requests consent
+     * 4. Initializes MobileAds SDK
+     *
+     * All operations are async with progress callbacks for UI updates.
+     *
+     * @param activity The SplashActivity instance
+     * @param onProgress Called with progress messages for UI updates
+     * @param onComplete Called when initialization completes (success = true/false)
+     */
+    fun initializeOnSplash(
+        activity: Activity,
+        onProgress: (String) -> Unit = {},
+        onComplete: (Boolean) -> Unit
+    ) {
+        if (!isInitialized) {
+            Log.e(TAG, "❌ Must call initWithoutFetch() first!")
+            onComplete(false)
+            return
+        }
+
+        Log.d(TAG, "════════════════════════════════════")
+        Log.d(TAG, "🚀 Splash Initialization Starting")
+        Log.d(TAG, "════════════════════════════════════")
+
+        onProgress("Fetching configuration...")
+
+        // STEP 1: Fetch Remote Config asynchronously
+        RemoteConfigManager.fetchAndActivateAsync { fetchSuccess ->
+            if (fetchSuccess) {
+                Log.i(TAG, "✅ Remote Config fetched successfully")
+                onProgress("Configuration loaded")
+            } else {
+                Log.w(TAG, "⚠️ Remote Config fetch failed - using defaults")
+                onProgress("Using default configuration")
+            }
+
+            // STEP 2: Attempt App ID override
+            val manifestAppId = AdmobAppIdOverride.getCurrentAppId(activity)
+            val remoteAppId = RemoteConfigManager.getAdmobAppId()
+
+            if (remoteAppId.isNotBlank()) {
+                Log.d(TAG, "🔧 Attempting App ID override...")
+                onProgress("Configuring ad network...")
+
+                val overrideSuccess = AdmobAppIdOverride.override(activity, remoteAppId)
+
+                if (overrideSuccess) {
+                    Log.i(TAG, "✅ App ID override successful - SDK will use: $remoteAppId")
+                } else {
+                    Log.w(TAG, "⚠️ App ID override failed - SDK will use manifest value: $manifestAppId")
+                }
+            }
+
+            // STEP 3: Request consent and initialize SDK
+            onProgress("Checking consent...")
+
+            val params = ConsentRequestParameters.Builder().build()
+
+            consentInformation.requestConsentInfoUpdate(
+                activity,
+                params,
+                {
+                    // Consent info updated
+                    UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) { formError ->
+                        if (formError != null) {
+                            Log.e(TAG, "Consent form error: ${formError.message}")
+                        }
+
+                        // Initialize SDK if can request ads
+                        if (consentInformation.canRequestAds()) {
+                            onProgress("Initializing ad SDK...")
+                            initializeMobileAdsSdk()
+                            onProgress("Ready")
+                            onComplete(true)
+                        } else {
+                            onComplete(false)
+                        }
+                    }
+                },
+                { requestError ->
+                    Log.e(TAG, "Consent request error: ${requestError.message}")
+                    // Still try to initialize if consent is not required
+                    if (consentInformation.canRequestAds()) {
+                        onProgress("Initializing ad SDK...")
+                        initializeMobileAdsSdk()
+                        onProgress("Ready")
+                        onComplete(true)
+                    } else {
+                        onComplete(false)
+                    }
+                }
+            )
+
+            // Check if already have consent
+            if (consentInformation.canRequestAds()) {
+                onProgress("Initializing ad SDK...")
+                initializeMobileAdsSdk()
+                // Don't call onComplete here as consent flow might still be running
+            }
+        }
+    }
+
+    /**
      * Request consent and initialize SDK. Call this from your first Activity.
      */
     fun requestConsentAndInitialize(activity: Activity) {

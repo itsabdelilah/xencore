@@ -45,15 +45,22 @@
             android:name="com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING"
             android:value="true"/>
 
+        <!-- Splash Activity - Now the launcher -->
         <activity
-            android:name="io.ads.demo.MainActivity"
-            android:exported="true">
+            android:name="io.ads.demo.SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Mediation">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Main Activity - No longer the launcher -->
+        <activity
+            android:name="io.ads.demo.MainActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

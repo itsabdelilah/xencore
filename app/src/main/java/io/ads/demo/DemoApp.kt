@@ -7,12 +7,16 @@ import io.ads.mediation.AdConfig
 import io.ads.mediation.AdsManager
 
 /**
- * Demo Application class for XenCore library integration.
+ * Demo Application class for AdMediation library integration.
  *
- * This demonstrates proper initialization with 3-tier fallback system:
- * 1. Firebase Remote Config (best) - from your Firebase Console
- * 2. AdConfig defaults (good) - hardcoded in this file
- * 3. Library test IDs (last resort) - from XenCore library
+ * This demonstrates the new non-blocking initialization pattern:
+ * - Quick init in Application.onCreate() (no blocking fetch)
+ * - Complete init with fetch in SplashActivity (with UI feedback)
+ *
+ * Benefits:
+ * - No 5-second freeze on app launch
+ * - Immediate UI feedback in splash screen
+ * - Same 3-tier fallback system as before
  */
 class DemoApp : Application() {
 
@@ -24,7 +28,7 @@ class DemoApp : Application() {
         super.onCreate()
 
         Log.d(TAG, "═════════════════════════════════════")
-        Log.d(TAG, "🚀 DemoApp Starting - XenCore Integration Demo")
+        Log.d(TAG, "⚡ DemoApp Starting - Non-blocking Init")
         Log.d(TAG, "═════════════════════════════════════")
 
         try {
@@ -46,19 +50,20 @@ class DemoApp : Application() {
                 adFrequencySeconds = 30L
             )
 
-            // STEP 3: Initialize AdsManager WITH app defaults
-            // This enables 3-tier fallback: Firebase → AdConfig → Library test IDs
-            Log.d(TAG, "Initializing AdsManager with AdConfig...")
-            AdsManager.init(this, adConfig)
-            Log.d(TAG, "✅ AdsManager initialized with app-specific defaults")
+            // STEP 3: Quick initialization WITHOUT blocking fetch
+            // The fetch and App ID override are deferred to SplashActivity
+            Log.d(TAG, "Quick AdsManager init (no blocking fetch)...")
+            AdsManager.initWithoutFetch(this, adConfig)
+            Log.d(TAG, "✅ Quick init complete - no blocking!")
 
             Log.d(TAG, "═════════════════════════════════════")
-            Log.d(TAG, "✅ DemoApp Initialization Complete")
-            Log.d(TAG, "📊 Fallback Chain:")
-            Log.d(TAG, "   1. Firebase Remote Config (will try to fetch)")
-            Log.d(TAG, "   2. DemoApp's AdConfig (if Firebase fails)")
-            Log.d(TAG, "   3. Library test IDs (emergency fallback)")
-            Log.d(TAG, "   Next: Call requestConsentAndInitialize() in Activity")
+            Log.d(TAG, "✅ DemoApp Quick Init Complete")
+            Log.d(TAG, "📊 What happens next:")
+            Log.d(TAG, "   1. SplashActivity shows immediately")
+            Log.d(TAG, "   2. Fetch Remote Config during splash")
+            Log.d(TAG, "   3. Override App ID if configured")
+            Log.d(TAG, "   4. Initialize consent and SDK")
+            Log.d(TAG, "   5. Navigate to MainActivity when ready")
             Log.d(TAG, "═════════════════════════════════════")
 
         } catch (e: Exception) {

@@ -158,6 +158,39 @@ object RemoteConfigManager {
     }
 
     /**
+     * Fetch and activate remote config values ASYNCHRONOUSLY with callback.
+     *
+     * This is the async version for use in SplashActivity, providing a callback
+     * when the fetch completes (or fails).
+     *
+     * @param onComplete Callback with success status (true if fetched, false if failed)
+     */
+    fun fetchAndActivateAsync(onComplete: (Boolean) -> Unit) {
+        if (!isInitialized) {
+            Log.e(TAG, "❌ Cannot fetch: RemoteConfig not initialized")
+            onComplete(false)
+            return
+        }
+
+        Log.d(TAG, "📡 Starting async fetch...")
+
+        remoteConfig.fetchAndActivate()
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val updated = task.result
+                    Log.i(TAG, "✅ Async fetch SUCCESS ${if (updated) "(NEW VALUES)" else "(CACHED)"}")
+                    logCurrentConfig()
+                    onComplete(true)
+                } else {
+                    Log.e(TAG, "❌ Async fetch FAILED: ${task.exception?.message}")
+                    Log.w(TAG, "⚠️ Using default/cached values")
+                    logCurrentConfig()
+                    onComplete(false)
+                }
+            }
+    }
+
+    /**
      * Fetch and activate remote config values SYNCHRONOUSLY with timeout.
      *
      * ⚠️ CRITICAL: This blocks the calling thread!
