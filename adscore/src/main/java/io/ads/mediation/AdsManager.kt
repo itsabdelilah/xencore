@@ -631,6 +631,7 @@ object AdsManager : DefaultLifecycleObserver {
             }
 
             override fun onAdShowedFullScreenContent() {
+                handler.removeCallbacksAndMessages(null)
                 Log.d(TAG, "App Open Ad showed")
             }
         }
@@ -750,6 +751,7 @@ object AdsManager : DefaultLifecycleObserver {
             }
 
             override fun onAdShowedFullScreenContent() {
+                handler.removeCallbacksAndMessages(null)
                 Log.d(TAG, "Interstitial Ad showed")
             }
         }
@@ -857,6 +859,7 @@ object AdsManager : DefaultLifecycleObserver {
             }
 
             override fun onAdShowedFullScreenContent() {
+                handler.removeCallbacksAndMessages(null)
                 Log.d(TAG, "Rewarded Ad showed")
             }
         }
