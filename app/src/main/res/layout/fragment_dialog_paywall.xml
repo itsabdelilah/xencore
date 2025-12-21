@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0D0D0D">
+
+    <!-- Close Button -->
+    <ImageView
+        android:id="@+id/close_button"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="16dp"
+        android:padding="12dp"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:contentDescription="Close"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        app:tint="#808080"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- FREE TRIAL HERO SECTION -->
+    <LinearLayout
+        android:id="@+id/trial_hero_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="60dp"
+        android:layout_marginHorizontal="24dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <!-- Gift Icon -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🎁"
+            android:textSize="56sp" />
+
+        <!-- Free Trial Title -->
+        <TextView
+            android:id="@+id/trial_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="TRY PREMIUM FREE"
+            android:textColor="#4CAF50"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.15" />
+
+        <!-- 3 Days Free - BIG -->
+        <TextView
+            android:id="@+id/trial_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="3 Days Free"
+            android:textColor="#FFFFFF"
+            android:textSize="36sp"
+            android:textStyle="bold" />
+
+        <!-- Sub text -->
+        <TextView
+            android:id="@+id/pricing_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Then $0.99/month • Cancel anytime"
+            android:textColor="#808080"
+            android:textSize="15sp" />
+
+    </LinearLayout>
+
+    <!-- Features Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/features_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginTop="32dp"
+        app:cardBackgroundColor="#1A1A1A"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp"
+        app:layout_constraintTop_toBottomOf="@id/trial_hero_section">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <!-- What you get title -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="What you'll get:"
+                android:textColor="#808080"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.1" />
+
+            <!-- Feature 1 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:gravity="center"
+                    android:background="@drawable/badge_trial"
+                    android:text="✓"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:text="Unlimited access to all features"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <!-- Feature 2 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:gravity="center"
+                    android:background="@drawable/badge_trial"
+                    android:text="✓"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:text="No ads or interruptions"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <!-- Feature 3 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:gravity="center"
+                    android:background="@drawable/badge_trial"
+                    android:text="✓"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:text="Priority customer support"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <!-- Feature 4 - Free Trial Highlight -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:gravity="center"
+                    android:background="@drawable/badge_trial"
+                    android:text="✓"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:text="Cancel anytime during trial"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- No Payment Today Banner -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/no_payment_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginTop="16dp"
+        app:cardBackgroundColor="#1B3D1F"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp"
+        app:layout_constraintTop_toBottomOf="@id/features_card">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="💳"
+                android:textSize="20sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:text="No payment today — Pay only if you love it!"
+                android:textColor="#4CAF50"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Start Trial Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/start_trial_button"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginBottom="12dp"
+        android:text="Start My Free Trial"
+        android:textAllCaps="false"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        app:backgroundTint="#4CAF50"
+        app:cornerRadius="16dp"
+        app:layout_constraintBottom_toTopOf="@id/restore_button" />
+
+    <!-- Restore Button -->
+    <TextView
+        android:id="@+id/restore_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="12dp"
+        android:text="Restore Purchase"
+        android:textColor="#808080"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toTopOf="@id/terms_text"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- Terms Text -->
+    <TextView
+        android:id="@+id/terms_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginBottom="20dp"
+        android:gravity="center"
+        android:text="After your 3-day free trial, you'll be charged the subscription price. Cancel anytime before trial ends to avoid charges."
+        android:textColor="#505050"
+        android:textSize="11sp"
+        android:lineSpacingExtra="2dp"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

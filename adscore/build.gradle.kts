@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
@@ -10,7 +12,7 @@ android {
 
     defaultConfig {
         minSdk = 26
-        targetSdk = 36
+        // targetSdk removed - deprecated for library modules in AGP 9.0+
 
         consumerProguardFiles("consumer-rules.pro")
     }
@@ -30,8 +32,14 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    kotlinOptions {
-        jvmTarget = "11"
+    buildFeatures {
+        viewBinding = true
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_11)
     }
 }
 
@@ -47,11 +55,15 @@ dependencies {
     api(libs.lifecycle.process)
 
     // Firebase Remote Config (exposed via 'api')
-    api(platform("com.google.firebase:firebase-bom:33.7.0"))
+    api(platform("com.google.firebase:firebase-bom:34.7.0"))
     api(libs.firebase.config)
 
     // Shimmer (for optional native ad loading effect)
     api(libs.shimmer)
+
+    // Billing (exposed via api for IAP)
+    api(libs.billing.ktx)
+    implementation(libs.fragment.ktx)
 }
 
 // Publishing configuration for JitPack
@@ -62,7 +74,7 @@ afterEvaluate {
                 from(components["release"])
                 groupId = "com.github.contabox"
                 artifactId = "ads-mediation"
-                version = "1.1.2"
+                version = "1.1.3"
             }
         }
     }

@@ -62,6 +62,7 @@ object RemoteConfigManager {
     private const val KEY_REWARD_AD_UNIT = "reward_ad_unit"
     private const val KEY_NATIVE_AD_UNIT = "native_ad_unit"
     private const val KEY_AD_FREQUENCY_SECONDS = "ad_frequency_seconds"
+    private const val KEY_PREMIUM_MODE = "premium_mode"
 
     private lateinit var remoteConfig: FirebaseRemoteConfig
     private var isInitialized = false
@@ -116,7 +117,8 @@ object RemoteConfigManager {
                 KEY_INTER_AD_UNIT to (config?.interstitialAdUnit ?: AdUnits.INTER),
                 KEY_REWARD_AD_UNIT to (config?.rewardedAdUnit ?: AdUnits.REWARD),
                 KEY_NATIVE_AD_UNIT to (config?.nativeAdUnit ?: AdUnits.NATIVE),
-                KEY_AD_FREQUENCY_SECONDS to (config?.adFrequencySeconds ?: AdUnits.FREQUENCY_SECONDS)
+                KEY_AD_FREQUENCY_SECONDS to (config?.adFrequencySeconds ?: AdUnits.FREQUENCY_SECONDS),
+                KEY_PREMIUM_MODE to "true" // Default: IAP enabled, paywall required
             )
 
             remoteConfig.setDefaultsAsync(defaults)
@@ -282,7 +284,8 @@ object RemoteConfigManager {
         Log.d(TAG, "   ├─ Interstitial: ${getInterAdUnit()}")
         Log.d(TAG, "   ├─ Rewarded: ${getRewardAdUnit()}")
         Log.d(TAG, "   ├─ Native: ${getNativeAdUnit()}")
-        Log.d(TAG, "   └─ Ad Frequency: ${getAdFrequencySeconds()}s")
+        Log.d(TAG, "   ├─ Ad Frequency: ${getAdFrequencySeconds()}s")
+        Log.d(TAG, "   └─ Premium Mode: ${isPremiumModeEnabled()}")
 
         // Show fetch info
         val lastFetchStatus = remoteConfig.info.lastFetchStatus
@@ -362,6 +365,20 @@ object RemoteConfigManager {
                 ?: AdUnits.FREQUENCY_SECONDS
         } else {
             AdUnits.FREQUENCY_SECONDS
+        }
+    }
+
+    /**
+     * Check if premium mode is enabled (IAP required for premium features).
+     *
+     * - true: IAP enabled, paywall required for premium features
+     * - false: IAP disabled, premium features unlocked by watching interstitial ads
+     */
+    fun isPremiumModeEnabled(): Boolean {
+        return if (isInitialized) {
+            remoteConfig.getString(KEY_PREMIUM_MODE).toBoolean()
+        } else {
+            true // Default to IAP mode if not initialized
         }
     }
 }

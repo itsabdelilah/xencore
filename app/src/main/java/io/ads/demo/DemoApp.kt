@@ -5,6 +5,8 @@ import android.util.Log
 import com.google.firebase.FirebaseApp
 import io.ads.mediation.AdConfig
 import io.ads.mediation.AdsManager
+import io.ads.mediation.billing.PremiumFeaturesManager
+import io.ads.mediation.billing.SubscriptionManager
 
 /**
  * Demo Application class for AdMediation library integration.
@@ -50,10 +52,19 @@ class DemoApp : Application() {
                 adFrequencySeconds = 30L
             )
 
-            // STEP 3: Quick initialization WITHOUT blocking fetch
+            // STEP 3: Initialize Billing Managers
+            Log.d(TAG, "Initializing billing managers...")
+            PremiumFeaturesManager.init(this)
+            SubscriptionManager.init(this, productId = "instantballx")
+            Log.d(TAG, "✅ Billing managers initialized")
+
+            // STEP 4: Quick initialization WITHOUT blocking fetch
             // The fetch and App ID override are deferred to SplashActivity
             Log.d(TAG, "Quick AdsManager init (no blocking fetch)...")
             AdsManager.initWithoutFetch(this, adConfig)
+
+            // STEP 5: Set up premium checker for ad blocking
+            AdsManager.premiumChecker = { PremiumFeaturesManager.hasPremiumAccess() }
             Log.d(TAG, "✅ Quick init complete - no blocking!")
 
             Log.d(TAG, "═════════════════════════════════════")

@@ -31,6 +31,10 @@
 -keep class com.google.ads.mediation.applovin.** { *; }
 -dontwarn com.google.ads.mediation.applovin.**
 
+# ========== Google Play Billing ==========
+-keep class com.android.billingclient.** { *; }
+-dontwarn com.android.billingclient.**
+
 # ========== Library Public API ==========
 # Keep all public API classes and methods
 -keep public class io.ads.mediation.AdsManager { *; }
@@ -38,6 +42,18 @@
 -keep public class io.ads.mediation.AdmobAppIdOverride { *; }
 -keep public class io.ads.mediation.NativeAdBinder { *; }
 -keep public class io.ads.mediation.AdUnits { *; }
+-keep public class io.ads.mediation.AdConfig { *; }
+
+# Billing/IAP classes
+-keep public class io.ads.mediation.billing.PremiumFeaturesManager { *; }
+-keep public class io.ads.mediation.billing.SubscriptionManager { *; }
+-keep public class io.ads.mediation.billing.BillingErrorHandler { *; }
+
+# Keep sealed class hierarchies for Kotlin
+-keep class io.ads.mediation.billing.SubscriptionState { *; }
+-keep class io.ads.mediation.billing.SubscriptionState$* { *; }
+-keep class io.ads.mediation.billing.PurchaseState { *; }
+-keep class io.ads.mediation.billing.PurchaseState$* { *; }
 
 # ========== Native Ad View IDs ==========
 # Don't obfuscate R.id.ad_* view IDs used in native ad layouts

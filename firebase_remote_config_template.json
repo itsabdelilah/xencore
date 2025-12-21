@@ -35,6 +35,12 @@
         "value": "30"
       },
       "description": "Minimum seconds between App Open and Interstitial ads (frequency capping)"
+    },
+    "premium_mode": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Premium mode: 'true' = IAP paywall required, 'false' = unlock by watching ads"
     }
   }
 }

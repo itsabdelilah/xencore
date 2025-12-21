@@ -43,6 +43,22 @@ object AdsManager : DefaultLifecycleObserver {
 
     private const val TAG = "AdsManager"
 
+    /**
+     * Optional callback to check if user has premium access.
+     * When set and returns true, ads will be skipped.
+     *
+     * Usage:
+     * ```kotlin
+     * AdsManager.premiumChecker = { PremiumFeaturesManager.hasPremiumAccess() }
+     * ```
+     */
+    var premiumChecker: (() -> Boolean)? = null
+
+    /**
+     * Check if user has premium access (ads should be skipped)
+     */
+    private fun isPremium(): Boolean = premiumChecker?.invoke() == true
+
     private lateinit var application: Application
     private var isInitialized = false
     private var canRequestAds = false
@@ -563,6 +579,13 @@ object AdsManager : DefaultLifecycleObserver {
         onComplete: () -> Unit,
         onFail: () -> Unit
     ) {
+        // Skip ads for premium users
+        if (isPremium()) {
+            Log.d(TAG, "⭐ Premium user - skipping App Open Ad")
+            onComplete()
+            return
+        }
+
         if (!canRequestAds || isShowingAd) {
             onFail()
             return
@@ -683,6 +706,13 @@ object AdsManager : DefaultLifecycleObserver {
         onComplete: () -> Unit,
         onFail: () -> Unit
     ) {
+        // Skip ads for premium users
+        if (isPremium()) {
+            Log.d(TAG, "⭐ Premium user - skipping Interstitial Ad")
+            onComplete()
+            return
+        }
+
         if (!canRequestAds || isShowingAd) {
             onFail()
             return
@@ -804,6 +834,13 @@ object AdsManager : DefaultLifecycleObserver {
         onComplete: () -> Unit,
         onFail: () -> Unit
     ) {
+        // Skip ads for premium users
+        if (isPremium()) {
+            Log.d(TAG, "⭐ Premium user - skipping Rewarded Ad")
+            onComplete()
+            return
+        }
+
         if (!canRequestAds || isShowingAd) {
             onFail()
             return
@@ -903,6 +940,14 @@ object AdsManager : DefaultLifecycleObserver {
         onLoaded: (NativeAd, ViewGroup) -> Unit,
         onFail: () -> Unit
     ) {
+        // Skip ads for premium users
+        if (isPremium()) {
+            Log.d(TAG, "⭐ Premium user - skipping Native Ad")
+            container.removeAllViews()
+            onFail()
+            return
+        }
+
         if (!canRequestAds) {
             Log.w(TAG, "Cannot load native ad: SDK not ready")
             onFail()
