@@ -35,6 +35,12 @@ android {
     buildFeatures {
         viewBinding = true
     }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
 }
 
 kotlin {
@@ -74,7 +80,7 @@ afterEvaluate {
                 from(components["release"])
                 groupId = "com.github.contabox"
                 artifactId = "ads-mediation"
-                version = "1.1.4"
+                version = "2.0.0"
             }
         }
     }
