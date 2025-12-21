@@ -74,7 +74,7 @@ afterEvaluate {
                 from(components["release"])
                 groupId = "com.github.contabox"
                 artifactId = "ads-mediation"
-                version = "1.1.3"
+                version = "1.1.4"
             }
         }
     }
