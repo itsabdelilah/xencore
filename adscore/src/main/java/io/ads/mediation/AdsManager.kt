@@ -59,6 +59,12 @@ object AdsManager : DefaultLifecycleObserver {
      */
     private fun isPremium(): Boolean = premiumChecker?.invoke() == true
 
+    /**
+     * Check if ads are globally enabled via Remote Config.
+     * When false, all ads are disabled across the entire app.
+     */
+    private fun isAdsEnabled(): Boolean = RemoteConfigManager.isAdsModeEnabled()
+
     private lateinit var application: Application
     private var isInitialized = false
     private var canRequestAds = false
@@ -542,6 +548,7 @@ object AdsManager : DefaultLifecycleObserver {
      * Preload app open ad
      */
     fun preloadAppOpen() {
+        if (!isAdsEnabled()) return // Ads globally disabled
         if (!canRequestAds || isLoadingAppOpen || appOpenAd != null) return
 
         isLoadingAppOpen = true
@@ -579,6 +586,13 @@ object AdsManager : DefaultLifecycleObserver {
         onComplete: () -> Unit,
         onFail: () -> Unit
     ) {
+        // Skip ads if globally disabled
+        if (!isAdsEnabled()) {
+            Log.d(TAG, "🚫 Ads disabled via Remote Config - skipping App Open Ad")
+            onComplete()
+            return
+        }
+
         // Skip ads for premium users
         if (isPremium()) {
             Log.d(TAG, "⭐ Premium user - skipping App Open Ad")
@@ -668,6 +682,7 @@ object AdsManager : DefaultLifecycleObserver {
      * Preload interstitial ad
      */
     fun preloadInterstitial() {
+        if (!isAdsEnabled()) return // Ads globally disabled
         if (!canRequestAds || isLoadingInterstitial || interstitialAd != null) return
 
         isLoadingInterstitial = true
@@ -706,6 +721,13 @@ object AdsManager : DefaultLifecycleObserver {
         onComplete: () -> Unit,
         onFail: () -> Unit
     ) {
+        // Skip ads if globally disabled
+        if (!isAdsEnabled()) {
+            Log.d(TAG, "🚫 Ads disabled via Remote Config - skipping Interstitial Ad")
+            onComplete()
+            return
+        }
+
         // Skip ads for premium users
         if (isPremium()) {
             Log.d(TAG, "⭐ Premium user - skipping Interstitial Ad")
@@ -795,6 +817,7 @@ object AdsManager : DefaultLifecycleObserver {
      * Preload rewarded ad
      */
     fun preloadRewarded() {
+        if (!isAdsEnabled()) return // Ads globally disabled
         if (!canRequestAds || isLoadingRewarded || rewardedAd != null) return
 
         isLoadingRewarded = true
@@ -834,6 +857,13 @@ object AdsManager : DefaultLifecycleObserver {
         onComplete: () -> Unit,
         onFail: () -> Unit
     ) {
+        // Skip ads if globally disabled
+        if (!isAdsEnabled()) {
+            Log.d(TAG, "🚫 Ads disabled via Remote Config - skipping Rewarded Ad")
+            onComplete()
+            return
+        }
+
         // Skip ads for premium users
         if (isPremium()) {
             Log.d(TAG, "⭐ Premium user - skipping Rewarded Ad")
@@ -940,6 +970,14 @@ object AdsManager : DefaultLifecycleObserver {
         onLoaded: (NativeAd, ViewGroup) -> Unit,
         onFail: () -> Unit
     ) {
+        // Skip ads if globally disabled
+        if (!isAdsEnabled()) {
+            Log.d(TAG, "🚫 Ads disabled via Remote Config - skipping Native Ad")
+            container.removeAllViews()
+            onFail()
+            return
+        }
+
         // Skip ads for premium users
         if (isPremium()) {
             Log.d(TAG, "⭐ Premium user - skipping Native Ad")

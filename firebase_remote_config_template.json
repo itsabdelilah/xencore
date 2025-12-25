@@ -41,6 +41,12 @@
         "value": "true"
       },
       "description": "Premium mode: 'true' = IAP paywall required, 'false' = unlock by watching ads"
+    },
+    "ads_mode": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Global ad kill switch: 'true' = show ads normally, 'false' = disable all ads and preloading"
     }
   }
 }

@@ -63,6 +63,7 @@ object RemoteConfigManager {
     private const val KEY_NATIVE_AD_UNIT = "native_ad_unit"
     private const val KEY_AD_FREQUENCY_SECONDS = "ad_frequency_seconds"
     private const val KEY_PREMIUM_MODE = "premium_mode"
+    private const val KEY_ADS_MODE = "ads_mode"
 
     private lateinit var remoteConfig: FirebaseRemoteConfig
     private var isInitialized = false
@@ -118,7 +119,8 @@ object RemoteConfigManager {
                 KEY_REWARD_AD_UNIT to (config?.rewardedAdUnit ?: AdUnits.REWARD),
                 KEY_NATIVE_AD_UNIT to (config?.nativeAdUnit ?: AdUnits.NATIVE),
                 KEY_AD_FREQUENCY_SECONDS to (config?.adFrequencySeconds ?: AdUnits.FREQUENCY_SECONDS),
-                KEY_PREMIUM_MODE to "true" // Default: IAP enabled, paywall required
+                KEY_PREMIUM_MODE to "true", // Default: IAP enabled, paywall required
+                KEY_ADS_MODE to true // Default: ads enabled (protects revenue if fetch fails)
             )
 
             remoteConfig.setDefaultsAsync(defaults)
@@ -285,7 +287,8 @@ object RemoteConfigManager {
         Log.d(TAG, "   ├─ Rewarded: ${getRewardAdUnit()}")
         Log.d(TAG, "   ├─ Native: ${getNativeAdUnit()}")
         Log.d(TAG, "   ├─ Ad Frequency: ${getAdFrequencySeconds()}s")
-        Log.d(TAG, "   └─ Premium Mode: ${isPremiumModeEnabled()}")
+        Log.d(TAG, "   ├─ Premium Mode: ${isPremiumModeEnabled()}")
+        Log.d(TAG, "   └─ Ads Mode: ${isAdsModeEnabled()}")
 
         // Show fetch info
         val lastFetchStatus = remoteConfig.info.lastFetchStatus
@@ -379,6 +382,22 @@ object RemoteConfigManager {
             remoteConfig.getString(KEY_PREMIUM_MODE).toBoolean()
         } else {
             true // Default to IAP mode if not initialized
+        }
+    }
+
+    /**
+     * Check if ads are enabled globally.
+     *
+     * - true: Ads are enabled, show ads normally
+     * - false: Ads are disabled, no ads will be shown or preloaded
+     *
+     * This is a global kill switch for all ads in the app.
+     */
+    fun isAdsModeEnabled(): Boolean {
+        return if (isInitialized) {
+            remoteConfig.getBoolean(KEY_ADS_MODE)
+        } else {
+            true // Default: show ads (protects revenue if not initialized)
         }
     }
 }
