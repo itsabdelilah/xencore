@@ -79,3 +79,7 @@ obj/
 
 # Claude Code settings
 .claude/
+
+# Documentation (keep local only)
+README.md
+CLAUDE.md
