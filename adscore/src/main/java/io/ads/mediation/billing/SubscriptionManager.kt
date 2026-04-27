@@ -12,14 +12,21 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Subscription Manager
  *
- * Core billing logic for Google Play subscription with free trial
+ * Core billing logic for Google Play subscriptions with optional free trial.
+ * Supports up to two parallel SKUs (monthly + yearly) — both are queried and
+ * cached side-by-side, so the paywall can switch between plans without
+ * reinitializing the billing client.
  *
  * Key responsibilities:
  * - Connect to Google Play Billing
- * - Query product details (single product)
- * - Handle purchase flow with free trial
- * - Acknowledge purchases
- * - Update premium feature status via PremiumFeaturesManager
+ * - Query monthly + (optional) yearly product details in a single batch
+ * - Handle purchase flow for the selected plan
+ * - Acknowledge purchases and update [PremiumFeaturesManager]
+ *
+ * Backward compatibility:
+ * - [init] (single-SKU) still works for apps that only ship a monthly plan.
+ * - All no-arg accessors ([getPrice], [getTrialInfo], etc.) default to MONTHLY,
+ *   matching pre-yearly behavior.
  */
 object SubscriptionManager : PurchasesUpdatedListener {
 
@@ -27,17 +34,35 @@ object SubscriptionManager : PurchasesUpdatedListener {
     private const val MAX_RETRY_ATTEMPTS = 3
 
     private var context: Context? = null
-    private var productId: String = ""
+    private var monthlyProductId: String = ""
+    private var yearlyProductId: String? = null
     private var billingClient: BillingClient? = null
     private var coroutineScope: CoroutineScope? = null
 
-    // Product details cache
-    private val _productDetails = MutableStateFlow<ProductDetails?>(null)
-    val productDetails: StateFlow<ProductDetails?> = _productDetails.asStateFlow()
+    // Product details cache — separate StateFlows for each SKU
+    private val _monthlyProductDetails = MutableStateFlow<ProductDetails?>(null)
+    val monthlyProductDetails: StateFlow<ProductDetails?> = _monthlyProductDetails.asStateFlow()
 
-    // Subscription state
+    private val _yearlyProductDetails = MutableStateFlow<ProductDetails?>(null)
+    val yearlyProductDetails: StateFlow<ProductDetails?> = _yearlyProductDetails.asStateFlow()
+
+    /**
+     * Backward-compatible alias for [monthlyProductDetails]. New code should
+     * read [monthlyProductDetails] or [yearlyProductDetails] directly.
+     */
+    @Deprecated(
+        "Use monthlyProductDetails or yearlyProductDetails",
+        ReplaceWith("monthlyProductDetails")
+    )
+    val productDetails: StateFlow<ProductDetails?> = monthlyProductDetails
+
+    // Subscription state — unified across SKUs (single premium tier)
     private val _subscriptionState = MutableStateFlow<SubscriptionState>(SubscriptionState.Loading)
     val subscriptionState: StateFlow<SubscriptionState> = _subscriptionState.asStateFlow()
+
+    // Which SKU is currently active (null when not subscribed)
+    private val _activeSubscriptionType = MutableStateFlow<SubscriptionType?>(null)
+    val activeSubscriptionType: StateFlow<SubscriptionType?> = _activeSubscriptionType.asStateFlow()
 
     // Purchase state
     private val _purchaseState = MutableStateFlow<PurchaseState>(PurchaseState.Idle)
@@ -47,24 +72,52 @@ object SubscriptionManager : PurchasesUpdatedListener {
     private var isInitialized = false
 
     /**
-     * Initialize the manager with application context and product ID
-     * Must be called before any other methods
+     * Initialize with a single (monthly) product ID. Backward-compatible entry
+     * point for apps that don't ship a yearly plan.
      *
      * @param context Application context
-     * @param productId The subscription product ID from Google Play Console
+     * @param productId The monthly subscription product ID from Google Play Console
      */
     @Synchronized
     fun init(context: Context, productId: String) {
+        init(context, monthlyProductId = productId, yearlyProductId = null)
+    }
+
+    /**
+     * Initialize with both monthly and yearly product IDs. Both are queried
+     * in a single batch call and can be purchased independently via
+     * [launchPurchaseFlow].
+     *
+     * Calling this method a second time with new product IDs will re-query
+     * product details without recreating the billing client.
+     *
+     * @param context Application context
+     * @param monthlyProductId The monthly subscription product ID
+     * @param yearlyProductId  The yearly subscription product ID, or null if
+     *                         the app does not offer a yearly plan
+     */
+    @Synchronized
+    fun init(context: Context, monthlyProductId: String, yearlyProductId: String?) {
         if (isInitialized) {
-            Log.d(TAG, "SubscriptionManager already initialized")
+            // Allow apps to add a yearly SKU after initial init, or swap IDs
+            val skuChanged = this.monthlyProductId != monthlyProductId ||
+                    this.yearlyProductId != yearlyProductId
+            if (!skuChanged) {
+                Log.d(TAG, "SubscriptionManager already initialized with same product IDs")
+                return
+            }
+            Log.d(TAG, "SubscriptionManager re-init: products changed, re-querying details")
+            this.monthlyProductId = monthlyProductId
+            this.yearlyProductId = yearlyProductId
+            coroutineScope?.launch { queryProductDetails() }
             return
         }
 
         this.context = context.applicationContext
-        this.productId = productId
+        this.monthlyProductId = monthlyProductId
+        this.yearlyProductId = yearlyProductId
         this.coroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-        // Create BillingClient
         billingClient = BillingClient.newBuilder(context.applicationContext)
             .setListener(this)
             .enablePendingPurchases(
@@ -76,22 +129,19 @@ object SubscriptionManager : PurchasesUpdatedListener {
             .build()
 
         isInitialized = true
-        Log.d(TAG, "SubscriptionManager initialized with productId: $productId")
+        Log.d(
+            TAG,
+            "SubscriptionManager initialized — monthly=$monthlyProductId, yearly=${yearlyProductId ?: "<none>"}"
+        )
 
         initializeBillingClient()
     }
 
-    /**
-     * Initialize billing client with auto-retry
-     */
     private fun initializeBillingClient() {
         Log.d(TAG, "Initializing billing client (attempt ${retryAttempt + 1})")
         connectToBillingService()
     }
 
-    /**
-     * Connect to Google Play Billing service
-     */
     private fun connectToBillingService() {
         val client = billingClient ?: return
 
@@ -124,9 +174,6 @@ object SubscriptionManager : PurchasesUpdatedListener {
         })
     }
 
-    /**
-     * Handle connection failure with retry logic
-     */
     private fun handleConnectionFailure(responseCode: Int) {
         if (retryAttempt < MAX_RETRY_ATTEMPTS && BillingErrorHandler.shouldAutoRetry(responseCode)) {
             val delay = BillingErrorHandler.getRetryDelay(responseCode, retryAttempt)
@@ -145,9 +192,6 @@ object SubscriptionManager : PurchasesUpdatedListener {
         }
     }
 
-    /**
-     * Called when billing service successfully connects
-     */
     private fun onBillingServiceConnected() {
         coroutineScope?.launch {
             queryProductDetails()
@@ -156,18 +200,31 @@ object SubscriptionManager : PurchasesUpdatedListener {
     }
 
     /**
-     * Query subscription product details from Google Play
+     * Query both monthly and yearly product details in a single batch call.
      */
     private suspend fun queryProductDetails() = withContext(Dispatchers.IO) {
         val client = billingClient ?: return@withContext
 
         try {
-            val productList = listOf(
-                QueryProductDetailsParams.Product.newBuilder()
-                    .setProductId(productId)
+            val productList = mutableListOf<QueryProductDetailsParams.Product>()
+
+            if (monthlyProductId.isNotEmpty()) {
+                productList += QueryProductDetailsParams.Product.newBuilder()
+                    .setProductId(monthlyProductId)
                     .setProductType(BillingClient.ProductType.SUBS)
                     .build()
-            )
+            }
+            yearlyProductId?.takeIf { it.isNotEmpty() }?.let { yearly ->
+                productList += QueryProductDetailsParams.Product.newBuilder()
+                    .setProductId(yearly)
+                    .setProductType(BillingClient.ProductType.SUBS)
+                    .build()
+            }
+
+            if (productList.isEmpty()) {
+                Log.w(TAG, "No product IDs configured — skipping query")
+                return@withContext
+            }
 
             val params = QueryProductDetailsParams.newBuilder()
                 .setProductList(productList)
@@ -176,10 +233,26 @@ object SubscriptionManager : PurchasesUpdatedListener {
             val result = client.queryProductDetails(params)
 
             if (result.billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                result.productDetailsList?.firstOrNull()?.let { details ->
-                    _productDetails.value = details
-                    Log.d(TAG, "Product details loaded: ${details.productId}")
-                    logOfferDetails(details)
+                val detailsList = result.productDetailsList.orEmpty()
+                detailsList.forEach { details ->
+                    when (details.productId) {
+                        monthlyProductId -> {
+                            _monthlyProductDetails.value = details
+                            Log.d(TAG, "Monthly product details loaded: ${details.productId}")
+                            logOfferDetails(details, "MONTHLY")
+                        }
+                        yearlyProductId -> {
+                            _yearlyProductDetails.value = details
+                            Log.d(TAG, "Yearly product details loaded: ${details.productId}")
+                            logOfferDetails(details, "YEARLY")
+                        }
+                    }
+                }
+                if (_monthlyProductDetails.value == null && monthlyProductId.isNotEmpty()) {
+                    Log.w(TAG, "Monthly SKU not returned by Play: $monthlyProductId")
+                }
+                if (_yearlyProductDetails.value == null && yearlyProductId?.isNotEmpty() == true) {
+                    Log.w(TAG, "Yearly SKU not returned by Play: $yearlyProductId")
                 }
             } else {
                 BillingErrorHandler.logError(
@@ -193,16 +266,16 @@ object SubscriptionManager : PurchasesUpdatedListener {
         }
     }
 
-    /**
-     * Log offer details for debugging
-     */
-    private fun logOfferDetails(details: ProductDetails) {
+    private fun logOfferDetails(details: ProductDetails, label: String) {
         details.subscriptionOfferDetails?.forEach { offer ->
-            Log.d(TAG, "Offer: ${offer.offerId ?: "base"}")
+            Log.d(TAG, "[$label] Offer: ${offer.offerId ?: "base"}")
             offer.pricingPhases.pricingPhaseList.forEach { phase ->
-                Log.d(TAG, "  Phase: ${phase.formattedPrice}, " +
-                        "Period: ${phase.billingPeriod}, " +
-                        "Cycles: ${phase.billingCycleCount}")
+                Log.d(
+                    TAG,
+                    "  Phase: ${phase.formattedPrice}, " +
+                            "Period: ${phase.billingPeriod}, " +
+                            "Cycles: ${phase.billingCycleCount}"
+                )
             }
         }
     }
@@ -246,26 +319,25 @@ object SubscriptionManager : PurchasesUpdatedListener {
         }
     }
 
-    /**
-     * Handle case when no purchases found
-     */
     private fun handleNoPurchases() {
         PremiumFeaturesManager.clearPremiumStatus()
+        _activeSubscriptionType.value = null
         _subscriptionState.value = SubscriptionState.None
     }
 
-    /**
-     * Handle purchase (new or existing)
-     */
     private suspend fun handlePurchase(purchase: Purchase, isRestore: Boolean) {
-        Log.d(TAG, "Processing purchase - State: ${purchase.purchaseState}, Products: ${purchase.products}")
+        Log.d(
+            TAG,
+            "Processing purchase — State: ${purchase.purchaseState}, Products: ${purchase.products}"
+        )
 
         when (purchase.purchaseState) {
             Purchase.PurchaseState.PURCHASED -> {
                 if (!purchase.isAcknowledged) {
                     acknowledgePurchase(purchase)
                 }
-                activateSubscription(isRestore)
+                val type = subscriptionTypeFor(purchase)
+                activateSubscription(isRestore, type)
             }
             Purchase.PurchaseState.PENDING -> {
                 Log.d(TAG, "Purchase pending (payment processing)")
@@ -280,8 +352,17 @@ object SubscriptionManager : PurchasesUpdatedListener {
     }
 
     /**
-     * Acknowledge purchase with Google Play
+     * Resolve which configured SKU a purchase corresponds to.
      */
+    private fun subscriptionTypeFor(purchase: Purchase): SubscriptionType? {
+        val purchasedId = purchase.products.firstOrNull() ?: return null
+        return when (purchasedId) {
+            monthlyProductId -> SubscriptionType.MONTHLY
+            yearlyProductId -> SubscriptionType.YEARLY
+            else -> null
+        }
+    }
+
     private suspend fun acknowledgePurchase(purchase: Purchase) = withContext(Dispatchers.IO) {
         val client = billingClient ?: return@withContext
 
@@ -306,43 +387,46 @@ object SubscriptionManager : PurchasesUpdatedListener {
         }
     }
 
-    /**
-     * Activate subscription and grant premium access
-     */
-    private fun activateSubscription(isRestore: Boolean) {
-        // Grant premium features via PremiumFeaturesManager
+    private fun activateSubscription(isRestore: Boolean, type: SubscriptionType?) {
         PremiumFeaturesManager.updateSubscriptionStatus(true)
 
+        _activeSubscriptionType.value = type
         _subscriptionState.value = SubscriptionState.Active
 
-        if (isRestore) {
-            _purchaseState.value = PurchaseState.Success("Subscription restored successfully")
+        _purchaseState.value = if (isRestore) {
+            PurchaseState.Success("Subscription restored successfully")
         } else {
-            _purchaseState.value = PurchaseState.Success("Premium features unlocked!")
+            PurchaseState.Success("Premium features unlocked!")
         }
 
-        Log.d(TAG, "Subscription activated")
+        Log.d(TAG, "Subscription activated — type=${type ?: "<unknown>"}")
     }
 
     /**
-     * Launch purchase flow for subscription
+     * Launch purchase flow for the monthly subscription.
+     * Backward-compatible alias for `launchPurchaseFlow(activity, MONTHLY)`.
      */
     fun launchPurchaseFlow(activity: Activity) {
+        launchPurchaseFlow(activity, SubscriptionType.MONTHLY)
+    }
+
+    /**
+     * Launch purchase flow for the chosen subscription type.
+     */
+    fun launchPurchaseFlow(activity: Activity, type: SubscriptionType) {
         checkInitialized()
         val client = billingClient ?: return
 
-        val details = _productDetails.value
+        val details = productDetailsFor(type)
         if (details == null) {
-            Log.e(TAG, "Product details not available")
+            Log.e(TAG, "Product details not available for $type")
             _purchaseState.value = PurchaseState.Error("Product not available. Please try again.")
             return
         }
 
-        // Get the offer with free trial (or base offer)
         val offerDetails = details.subscriptionOfferDetails?.firstOrNull()
-
         if (offerDetails == null) {
-            Log.e(TAG, "No offer found for product")
+            Log.e(TAG, "No offer found for product ${details.productId}")
             _purchaseState.value = PurchaseState.Error("Subscription offer not available")
             return
         }
@@ -373,18 +457,15 @@ object SubscriptionManager : PurchasesUpdatedListener {
             )
         }
 
-        Log.d(TAG, "Purchase flow launched")
+        Log.d(TAG, "Purchase flow launched for $type")
     }
 
-    /**
-     * Called when purchases are updated (new purchase, cancelled, etc.)
-     */
     override fun onPurchasesUpdated(billingResult: BillingResult, purchases: MutableList<Purchase>?) {
-        Log.d(TAG, "onPurchasesUpdated - Response: ${billingResult.responseCode}")
+        Log.d(TAG, "onPurchasesUpdated — Response: ${billingResult.responseCode}")
 
         when (billingResult.responseCode) {
             BillingClient.BillingResponseCode.OK -> {
-                if (purchases != null && purchases.isNotEmpty()) {
+                if (!purchases.isNullOrEmpty()) {
                     coroutineScope?.launch {
                         purchases.forEach { purchase ->
                             handlePurchase(purchase, isRestore = false)
@@ -431,7 +512,6 @@ object SubscriptionManager : PurchasesUpdatedListener {
 
         queryPurchases()
 
-        // Check if we found an active subscription
         delay(500) // Brief delay for processing
         if (_subscriptionState.value is SubscriptionState.Active) {
             _purchaseState.value = PurchaseState.Success("Subscription restored!")
@@ -440,100 +520,126 @@ object SubscriptionManager : PurchasesUpdatedListener {
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Pricing accessors — type-aware overloads + backward-compatible aliases
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** Backward-compatible alias for `getPrice(MONTHLY)`. */
+    fun getPrice(): String = getPrice(SubscriptionType.MONTHLY)
+
     /**
-     * Get formatted price string
-     * Returns price with trial info if available
+     * Get the formatted recurring price for the chosen plan.
+     * Returns a sensible placeholder if product details are not yet loaded.
      */
-    fun getPrice(): String {
-        val details = _productDetails.value ?: return "$0.99/month"
-
-        val offerDetails = details.subscriptionOfferDetails?.firstOrNull()
-        val pricingPhases = offerDetails?.pricingPhases?.pricingPhaseList ?: return "$0.99/month"
-
-        // Get the recurring price (skip free trial phase)
-        val recurringPhase = pricingPhases.find {
-            it.priceAmountMicros > 0
-        }
-
-        return recurringPhase?.formattedPrice ?: "$0.99/month"
+    fun getPrice(type: SubscriptionType): String {
+        val details = productDetailsFor(type) ?: return defaultPriceFor(type)
+        val recurringPhase = details.subscriptionOfferDetails
+            ?.firstOrNull()
+            ?.pricingPhases
+            ?.pricingPhaseList
+            ?.find { it.priceAmountMicros > 0 }
+        return recurringPhase?.formattedPrice ?: defaultPriceFor(type)
     }
 
+    /** Backward-compatible alias for `getTrialInfo(MONTHLY)`. */
+    fun getTrialInfo(): String? = getTrialInfo(SubscriptionType.MONTHLY)
+
     /**
-     * Get trial info string
-     * Returns trial period description if available
+     * Get a human-readable trial description for the chosen plan
+     * (e.g. "3 days free"), or null if no trial is offered.
      */
-    fun getTrialInfo(): String? {
-        val details = _productDetails.value ?: return null
+    fun getTrialInfo(type: SubscriptionType): String? {
+        val details = productDetailsFor(type) ?: return null
+        val trialPhase = details.subscriptionOfferDetails
+            ?.firstOrNull()
+            ?.pricingPhases
+            ?.pricingPhaseList
+            ?.find { it.priceAmountMicros == 0L }
+            ?: return null
 
-        val offerDetails = details.subscriptionOfferDetails?.firstOrNull()
-        val pricingPhases = offerDetails?.pricingPhases?.pricingPhaseList ?: return null
-
-        // Find free trial phase (price = 0)
-        val trialPhase = pricingPhases.find {
-            it.priceAmountMicros == 0L
-        }
-
-        return trialPhase?.let { phase ->
-            // Parse billing period (e.g., "P3D" = 3 days, "P1W" = 1 week)
-            val period = phase.billingPeriod
-            when {
-                period.contains("D") -> {
-                    val days = period.replace("P", "").replace("D", "")
-                    "$days days free"
-                }
-                period.contains("W") -> {
-                    val weeks = period.replace("P", "").replace("W", "")
-                    "$weeks week${if (weeks.toIntOrNull() ?: 1 > 1) "s" else ""} free"
-                }
-                period.contains("M") -> {
-                    val months = period.replace("P", "").replace("M", "")
-                    "$months month${if (months.toIntOrNull() ?: 1 > 1) "s" else ""} free"
-                }
-                else -> "Free trial"
-            }
-        }
+        return formatTrialPeriod(trialPhase.billingPeriod)
     }
 
+    /** Backward-compatible alias for `getPricingDescription(MONTHLY)`. */
+    fun getPricingDescription(): String = getPricingDescription(SubscriptionType.MONTHLY)
+
     /**
-     * Get full pricing description
-     * E.g., "3 days free, then $0.99/month"
+     * Full pricing description, including trial if available.
+     * Suffix is period-aware: "/month" for monthly, "/year" for yearly.
      */
-    fun getPricingDescription(): String {
-        val trialInfo = getTrialInfo()
-        val price = getPrice()
+    fun getPricingDescription(type: SubscriptionType): String {
+        val trialInfo = getTrialInfo(type)
+        val price = getPrice(type)
+        val suffix = periodSuffixFor(type)
 
         return if (trialInfo != null) {
-            "$trialInfo, then $price/month"
+            "$trialInfo, then $price$suffix"
         } else {
-            "$price/month"
+            "$price$suffix"
         }
     }
 
+    /** Backward-compatible alias for `hasFreeTrial(MONTHLY)`. */
+    fun hasFreeTrial(): Boolean = hasFreeTrial(SubscriptionType.MONTHLY)
+
+    /** Whether a free trial is offered for the chosen plan. */
+    fun hasFreeTrial(type: SubscriptionType): Boolean = getTrialInfo(type) != null
+
     /**
-     * Check if free trial is available
+     * Returns the cached [ProductDetails] for the chosen plan, or null if not
+     * yet loaded (or yearly was never registered).
      */
-    fun hasFreeTrial(): Boolean {
-        return getTrialInfo() != null
+    private fun productDetailsFor(type: SubscriptionType): ProductDetails? = when (type) {
+        SubscriptionType.MONTHLY -> _monthlyProductDetails.value
+        SubscriptionType.YEARLY -> _yearlyProductDetails.value
+    }
+
+    private fun defaultPriceFor(type: SubscriptionType): String = when (type) {
+        SubscriptionType.MONTHLY -> "\$0.99/month"
+        SubscriptionType.YEARLY -> "\$9.99/year"
+    }
+
+    private fun periodSuffixFor(type: SubscriptionType): String = when (type) {
+        SubscriptionType.MONTHLY -> "/month"
+        SubscriptionType.YEARLY -> "/year"
     }
 
     /**
-     * Reset purchase state to idle
+     * Convert an ISO-8601 billing period (e.g. "P3D", "P1W", "P1M") into a
+     * human-readable trial description.
      */
+    private fun formatTrialPeriod(period: String): String {
+        return when {
+            period.contains("D") -> {
+                val days = period.replace("P", "").replace("D", "")
+                "$days days free"
+            }
+            period.contains("W") -> {
+                val weeks = period.replace("P", "").replace("W", "")
+                val plural = (weeks.toIntOrNull() ?: 1) > 1
+                "$weeks week${if (plural) "s" else ""} free"
+            }
+            period.contains("M") -> {
+                val months = period.replace("P", "").replace("M", "")
+                val plural = (months.toIntOrNull() ?: 1) > 1
+                "$months month${if (plural) "s" else ""} free"
+            }
+            else -> "Free trial"
+        }
+    }
+
+    /** Reset purchase state to idle */
     fun resetPurchaseState() {
         _purchaseState.value = PurchaseState.Idle
     }
 
-    /**
-     * Check if user has premium access
-     */
+    /** Check if the user has premium access (either SKU). */
     fun hasPremiumAccess(): Boolean {
         return _subscriptionState.value is SubscriptionState.Active ||
-               PremiumFeaturesManager.hasPremiumAccess()
+                PremiumFeaturesManager.hasPremiumAccess()
     }
 
-    /**
-     * Cleanup
-     */
+    /** Cleanup */
     fun cleanup() {
         coroutineScope?.cancel()
         billingClient?.endConnection()
@@ -541,9 +647,20 @@ object SubscriptionManager : PurchasesUpdatedListener {
 
     private fun checkInitialized() {
         if (!isInitialized) {
-            throw IllegalStateException("SubscriptionManager not initialized. Call init(context, productId) first.")
+            throw IllegalStateException(
+                "SubscriptionManager not initialized. Call init(context, productId) " +
+                        "or init(context, monthlyProductId, yearlyProductId) first."
+            )
         }
     }
+}
+
+/**
+ * Identifies which subscription plan an action targets.
+ */
+enum class SubscriptionType {
+    MONTHLY,
+    YEARLY
 }
 
 /**
